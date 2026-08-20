@@ -1,0 +1,135 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #87CEEB;
+  height: 100%;
+  width: 100%;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+canvas {
+  display: block;
+  background: #87CEEB;
+  image-rendering: pixelated;
+}
+
+#hint {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  font-size: 13px;
+  color: #000;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 6px 10px;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+#cheatPanel {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(20, 20, 28, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 8px 12px;
+  color: #fff;
+}
+
+#diceFace {
+  font-size: 30px;
+  width: 40px;
+  text-align: center;
+  transition: transform 0.08s ease;
+}
+
+#diceFace.rolling {
+  animation: diceSpin 0.08s linear infinite;
+}
+
+@keyframes diceSpin {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(15deg) scale(1.08); }
+  100% { transform: rotate(-10deg) scale(1); }
+}
+
+#cheatInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+#cheatStreakLabel {
+  font-size: 12px;
+  color: #cfcfda;
+}
+
+#cheatBtn {
+  background: #6b3bff;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: bold;
+  border-radius: 6px;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+}
+
+#cheatBtn:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+
+#cheatBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+#winOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 10, 14, 0.85);
+  color: #fff;
+  text-align: center;
+}
+
+#winOverlay.hidden {
+  display: none;
+}
+
+#winOverlay h1 {
+  margin: 0 0 8px;
+  color: #ffd23f;
+  text-shadow: 0 0 12px rgba(255, 210, 63, 0.6);
+}
+
+#winOverlay p {
+  margin: 0 0 18px;
+  color: #cfcfda;
+}
+
+#winOverlay button {
+  background: #ff6b00;
+  color: #fff;
+  border: none;
+  padding: 10px 22px;
+  font-size: 1rem;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+#winOverlay button:hover {
+  filter: brightness(1.1);
+}

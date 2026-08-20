@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Rage Course</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="hint">A/D to move, SPACE to jump. Good luck.</div>
+
+  <div id="cheatPanel">
+    <div id="diceFace">🎲</div>
+    <div id="cheatInfo">
+      <span id="cheatStreakLabel">Streak: 0/3 sixes</span>
+      <button id="cheatBtn">ROLL FOR A SKIP</button>
+    </div>
+  </div>
+
+  <div id="winOverlay" class="hidden">
+    <div>
+      <h1>YOU MADE IT</h1>
+      <p id="deathCount"></p>
+      <button id="restartBtn">RUN IT BACK</button>
+    </div>
+  </div>
+  <canvas id="board"></canvas>
+  <script src="script.js"></script>
+</body>
+</html>
