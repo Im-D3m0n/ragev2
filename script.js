@@ -185,6 +185,28 @@ const finish = {
 
 let hasWon = false;
 
+// ---- NEW: parallax background clouds (purely decorative) ----
+const clouds = [];
+for (let i = 0; i < 18; i++) {
+    clouds.push({
+        x: Math.random() * WORLD_WIDTH * 1.4,
+        y: 100 + Math.random() * 2000,
+        scale: 0.6 + Math.random() * 1.2,
+    });
+}
+
+// ---- NEW: death-roll dice event ----
+// Periodically the game forces a dice roll. Roll the shown target number
+// or die on the spot. Physics pause while the prompt is up.
+let diceDeathActive = false;
+let diceDeathTarget = 4;
+let diceDeathTimer = randintSeeded();
+let diceDeathTime = 0;
+
+function randintSeeded() {
+    return 900 + Math.floor(Math.random() * 700); // 900-1600 frames
+}
+
 // ===================== INPUT =====================
 
 const keys = {};
@@ -413,6 +435,10 @@ function resetGame() {
     player.velocityX = 0;
     cheatStreak = 0;
     document.getElementById("cheatStreakLabel").textContent = "Streak: 0/3 sixes";
+    diceDeathActive = false;
+    diceDeathTime = 0;
+    diceDeathTimer = randintSeeded();
+    document.getElementById("diceEventOverlay").classList.add("hidden");
     document.getElementById("winOverlay").classList.add("hidden");
 }
 
@@ -484,10 +510,67 @@ function performCheatSkip() {
 
 cheatBtn.addEventListener("click", rollCheatDice);
 
+// ---- NEW: forced death-roll event ----
+const diceEventOverlay = document.getElementById("diceEventOverlay");
+const diceEventFace = document.getElementById("diceEventFace");
+const diceEventTargetEl = document.getElementById("diceEventTarget");
+const diceEventRollBtn = document.getElementById("diceEventRollBtn");
+const diceEventResultMsg = document.getElementById("diceEventResultMsg");
+
+function triggerDiceDeathEvent() {
+    if (hasWon) return;
+    diceDeathActive = true;
+    diceDeathTarget = randint(1, 6);
+    diceEventTargetEl.textContent = diceDeathTarget;
+    diceEventFace.textContent = "🎲";
+    diceEventFace.classList.remove("rolling");
+    diceEventResultMsg.textContent = "";
+    diceEventRollBtn.disabled = false;
+    diceEventOverlay.classList.remove("hidden");
+}
+
+function rollDiceDeath() {
+    diceEventRollBtn.disabled = true;
+    diceEventFace.classList.add("rolling");
+
+    let ticks = 0;
+    const maxTicks = 16;
+    const spin = setInterval(() => {
+        diceEventFace.textContent = DICE_FACES[randint(0, 5)];
+        ticks++;
+        if (ticks >= maxTicks) {
+            clearInterval(spin);
+            settleDiceDeath();
+        }
+    }, 60);
+}
+
+function settleDiceDeath() {
+    const result = randint(1, 6);
+    diceEventFace.textContent = DICE_FACES[result - 1];
+    diceEventFace.classList.remove("rolling");
+
+    const survived = result === diceDeathTarget;
+    diceEventResultMsg.textContent = survived
+        ? `Rolled a ${result}. Lucky.`
+        : `Rolled a ${result}. Needed a ${diceDeathTarget}. RIP.`;
+    diceEventResultMsg.style.color = survived ? "#3fff8f" : "#ff3b3b";
+
+    setTimeout(() => {
+        diceEventOverlay.classList.add("hidden");
+        diceDeathActive = false;
+        diceDeathTime = 0;
+        diceDeathTimer = randintSeeded();
+        if (!survived) death();
+    }, 1100);
+}
+
+diceEventRollBtn.addEventListener("click", rollDiceDeath);
+
 // ===================== MAIN PHYSICS STEP =====================
 
 function move() {
-    if (hasWon) return;
+    if (hasWon || diceDeathActive) return;
 
     let dy = 0;
 
@@ -799,45 +882,209 @@ function randint(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+// ===================== VISUAL HELPERS (decorative only) =====================
+
+function drawSky() {
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    grad.addColorStop(0, "#4FA8E0");
+    grad.addColorStop(0.6, "#8FD0EE");
+    grad.addColorStop(1, "#CDEFFB");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawCloud(x, y, scale) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 26, 16, 0, 0, Math.PI * 2);
+    ctx.ellipse(20, -8, 18, 13, 0, 0, Math.PI * 2);
+    ctx.ellipse(-20, -4, 16, 12, 0, 0, Math.PI * 2);
+    ctx.ellipse(6, -14, 14, 11, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+}
+
+function drawClouds() {
+    clouds.forEach((c) => drawCloud(c.x, c.y, c.scale));
+}
+
+function drawGrass() {
+    const grad = ctx.createLinearGradient(0, grass.y, 0, grass.y + grass.height);
+    grad.addColorStop(0, "#5FCB4E");
+    grad.addColorStop(1, "#2E8B2E");
+    ctx.fillStyle = grad;
+    ctx.fillRect(grass.x, grass.y, grass.width, grass.height);
+
+    ctx.fillStyle = "#3A7A2C";
+    for (let bx = grass.x; bx < grass.x + grass.width; bx += 14) {
+        ctx.beginPath();
+        ctx.moveTo(bx, grass.y);
+        ctx.lineTo(bx + 4, grass.y - 7);
+        ctx.lineTo(bx + 8, grass.y);
+        ctx.closePath();
+        ctx.fill();
+    }
+}
+
+function drawSpikeRow(spike) {
+    const teeth = Math.max(1, Math.round(spike.width / 22));
+    const toothW = spike.width / teeth;
+    const grad = ctx.createLinearGradient(0, spike.y, 0, spike.y + spike.height);
+    grad.addColorStop(0, "#FF5C4D");
+    grad.addColorStop(1, "#A31A1A");
+    ctx.fillStyle = grad;
+
+    for (let i = 0; i < teeth; i++) {
+        const bx = spike.x + i * toothW;
+        ctx.beginPath();
+        ctx.moveTo(bx, spike.y + spike.height);
+        ctx.lineTo(bx + toothW / 2, spike.y);
+        ctx.lineTo(bx + toothW, spike.y + spike.height);
+        ctx.closePath();
+        ctx.fill();
+    }
+    ctx.strokeStyle = "#5C0E0E";
+    ctx.lineWidth = 1;
+    for (let i = 0; i < teeth; i++) {
+        const bx = spike.x + i * toothW;
+        ctx.beginPath();
+        ctx.moveTo(bx, spike.y + spike.height);
+        ctx.lineTo(bx + toothW / 2, spike.y);
+        ctx.lineTo(bx + toothW, spike.y + spike.height);
+        ctx.stroke();
+    }
+}
+
+function drawPlatform(platform) {
+    const grad = ctx.createLinearGradient(0, platform.y, 0, platform.y + platform.height);
+    grad.addColorStop(0, "#6FB6D6");
+    grad.addColorStop(1, "#38708A");
+    ctx.fillStyle = grad;
+    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+    ctx.strokeStyle = "#274F60";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(platform.x + 0.5, platform.y + 0.5, platform.width - 1, platform.height - 1);
+}
+
+function drawConveyorBelt(belt, offset) {
+    ctx.fillStyle = "#33322E";
+    ctx.fillRect(belt.x, belt.y, belt.width, belt.height);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(belt.x, belt.y, belt.width, belt.height);
+    ctx.clip();
+    ctx.fillStyle = "#FF6B00";
+    const stripeW = 10;
+    const shift = ((offset * belt.dir) % (stripeW * 2) + stripeW * 2) % (stripeW * 2);
+    for (let sx = belt.x - stripeW * 2 + shift; sx < belt.x + belt.width + stripeW; sx += stripeW * 2) {
+        ctx.beginPath();
+        ctx.moveTo(sx, belt.y + belt.height);
+        ctx.lineTo(sx + stripeW, belt.y + belt.height);
+        ctx.lineTo(sx + stripeW * 1.6, belt.y);
+        ctx.lineTo(sx + stripeW * 0.6, belt.y);
+        ctx.closePath();
+        ctx.fill();
+    }
+    ctx.restore();
+}
+
+function drawButtonIcon(b) {
+    ctx.fillStyle = "#2b2b2b";
+    ctx.fillRect(b.x, b.y, b.width, b.height);
+    ctx.fillStyle = "#ff3b3b";
+    ctx.fillRect(b.x + 6, b.y + 6, b.width - 12, b.height - 12);
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 14px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("?", b.x + b.width / 2, b.y + b.height / 2 + 1);
+}
+
+function drawCheckpointFlag(c) {
+    ctx.fillStyle = "#888";
+    ctx.fillRect(c.x + c.width / 2 - 2, c.y, 4, c.height);
+    ctx.fillStyle = "#ffd23f";
+    ctx.beginPath();
+    ctx.moveTo(c.x + c.width / 2 + 2, c.y);
+    ctx.lineTo(c.x + c.width, c.y + c.height * 0.22);
+    ctx.lineTo(c.x + c.width / 2 + 2, c.y + c.height * 0.44);
+    ctx.closePath();
+    ctx.fill();
+}
+
+function drawPlayer() {
+    const facing = player.velocityX < -0.2 ? -1 : 1;
+
+    const grad = ctx.createLinearGradient(player.x, player.y, player.x, player.y + player.height);
+    grad.addColorStop(0, "#FFA352");
+    grad.addColorStop(1, "#FF6B00");
+    ctx.fillStyle = grad;
+
+    const r = 6;
+    ctx.beginPath();
+    ctx.moveTo(player.x + r, player.y);
+    ctx.arcTo(player.x + player.width, player.y, player.x + player.width, player.y + player.height, r);
+    ctx.arcTo(player.x + player.width, player.y + player.height, player.x, player.y + player.height, r);
+    ctx.arcTo(player.x, player.y + player.height, player.x, player.y, r);
+    ctx.arcTo(player.x, player.y, player.x + player.width, player.y, r);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#B34A00";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // eyes, looking in the direction of travel
+    const eyeY = player.y + player.height * 0.4;
+    const eyeOffsetX = facing === 1 ? player.width * 0.62 : player.width * 0.38;
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(player.x + eyeOffsetX, eyeY, 4.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#1a1a1a";
+    ctx.beginPath();
+    ctx.arc(player.x + eyeOffsetX + facing * 1.4, eyeY, 2, 0, Math.PI * 2);
+    ctx.fill();
+}
+
 // ===================== RENDER =====================
 
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    drawSky();
+
+    ctx.save();
+    ctx.translate(-camera.x * 0.3, -camera.y * 0.15);
+    drawClouds();
+    ctx.restore();
+
     ctx.save();
     ctx.translate(-camera.x, -camera.y);
 
     wind_zones.forEach((zone) => {
         ctx.fillStyle = "rgba(0, 206, 209, 0.15)";
         ctx.fillRect(zone.x, zone.y, zone.width, zone.height);
+        ctx.strokeStyle = "rgba(0, 206, 209, 0.4)";
+        ctx.strokeRect(zone.x, zone.y, zone.width, zone.height);
     });
 
-    ctx.fillStyle = "#FF6B00";
-    ctx.fillRect(player.x, player.y, player.width, player.height);
+    drawGrass();
 
-    ctx.fillStyle = "green";
-    ctx.fillRect(grass.x, grass.y, grass.width, grass.height);
+    spikes.forEach(drawSpikeRow);
+    fake_spikes.forEach(drawSpikeRow);
 
-    ctx.fillStyle = "red";
-    spikes.forEach((spike) => ctx.fillRect(spike.x, spike.y, spike.width, spike.height));
+    platforms.forEach(drawPlatform);
 
-    fake_spikes.forEach((s) => ctx.fillRect(s.x, s.y, s.width, s.height));
+    conveyer.forEach((belt) => drawConveyorBelt(belt, time * 1.5));
 
-    ctx.fillStyle = "#4A8FA8";
-    platforms.forEach((platform) => ctx.fillRect(platform.x, platform.y, platform.width, platform.height));
+    drawPlatform(fake_platform);
+    drawPlatform(moving_platforms[0]);
 
-    ctx.fillStyle = "#FF6B00";
-    conveyer.forEach((belt) => ctx.fillRect(belt.x, belt.y, belt.width, belt.height));
-
-    ctx.fillStyle = "#4A8FA8";
-    ctx.fillRect(fake_platform.x, fake_platform.y, fake_platform.width, fake_platform.height);
-    ctx.fillRect(
-        moving_platforms[0].x,
-        moving_platforms[0].y,
-        moving_platforms[0].width,
-        moving_platforms[0].height
-    );
-
-    // ---- NEW: draw crumble platforms with a fading/cracking look ----
+    // ---- crumble platforms, fading/cracking look ----
     crumble_platforms.forEach((plat) => {
         if (plat.state === "gone") return;
         const wear = plat.standTimer / CRUMBLE_DELAY;
@@ -846,15 +1093,14 @@ function draw() {
         const b = Math.round(168 - wear * 130);
         ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
         ctx.fillRect(plat.x, plat.y, plat.width, plat.height);
+        ctx.strokeStyle = "rgba(0,0,0,0.3)";
+        ctx.strokeRect(plat.x + 0.5, plat.y + 0.5, plat.width - 1, plat.height - 1);
     });
 
-    ctx.fillStyle = "black";
-    button.forEach((b) => ctx.fillRect(b.x, b.y, b.width, b.height));
+    button.forEach(drawButtonIcon);
+    checkpoint.forEach(drawCheckpointFlag);
 
-    ctx.fillStyle = "yellow";
-    checkpoint.forEach((c) => ctx.fillRect(c.x, c.y, c.width, c.height));
-
-    // ---- NEW: draw the finish flag ----
+    // ---- finish flag ----
     ctx.fillStyle = "#888";
     ctx.fillRect(finish.x, finish.y, 4, finish.height);
     ctx.fillStyle = hasWon ? "#3fff8f" : "#ffd23f";
@@ -866,6 +1112,8 @@ function draw() {
     ctx.fill();
 
     meteors.forEach(drawMeteor);
+
+    drawPlayer();
 
     // Ghost trail from past deaths is tracked in `clones` but intentionally
     // not rendered — kept invisible.
@@ -896,6 +1144,13 @@ function loop() {
     time++;
     meteor_time++;
     counter++;
+
+    if (!diceDeathActive && !hasWon) {
+        diceDeathTime++;
+        if (diceDeathTime > diceDeathTimer) {
+            triggerDiceDeathEvent();
+        }
+    }
 
     updateMovingPlatforms();
     move();

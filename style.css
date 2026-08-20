@@ -92,6 +92,77 @@ canvas {
   cursor: default;
 }
 
+#diceEventOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 5, 5, 0.88);
+  color: #fff;
+  text-align: center;
+}
+
+#diceEventOverlay.hidden {
+  display: none;
+}
+
+#diceEventOverlay h2 {
+  margin: 0 0 8px;
+  color: #ff3b3b;
+  text-shadow: 0 0 14px rgba(255, 59, 59, 0.7);
+  letter-spacing: 1px;
+}
+
+#diceEventOverlay p {
+  margin: 4px 0;
+  color: #e6c9c9;
+}
+
+#diceEventTarget {
+  color: #ffd23f;
+  font-weight: bold;
+  font-size: 1.15em;
+}
+
+#diceEventFace {
+  font-size: 54px;
+  margin: 14px 0;
+  transition: transform 0.08s ease;
+}
+
+#diceEventFace.rolling {
+  animation: diceSpin 0.08s linear infinite;
+}
+
+#diceEventRollBtn {
+  background: #ff3b3b;
+  color: #fff;
+  border: none;
+  padding: 10px 26px;
+  font-size: 1rem;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+}
+
+#diceEventRollBtn:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+#diceEventRollBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+#diceEventResultMsg {
+  min-height: 20px;
+  font-weight: bold;
+  color: #ffd23f;
+}
+
 #winOverlay {
   position: fixed;
   inset: 0;
